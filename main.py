@@ -4,17 +4,31 @@ from nltk.stem import WordNetLemmatizer
 from nltk.corpus import wordnet
 
 # Download necessary NLTK data once, then comment these out after first run
+import streamlit as st
+import nltk
+from nltk.stem import WordNetLemmatizer
+from nltk.corpus import wordnet
+
+# Download necessary NLTK data once, then comment these out after first run
 try:
+    # This checks if the data is already present.
+    # If not, it will raise a LookupError.
     nltk.data.find('corpora/wordnet')
     nltk.data.find('corpora/omw-1.4')
     nltk.data.find('taggers/averaged_perceptron_tagger')
 except nltk.downloader.DownloadError:
+    # This handles the download error if it's not a LookupError, but it's
+    # better to use LookupError for data not found.
     nltk.download('punkt')
     nltk.download('wordnet')
     nltk.download('omw-1.4')
     nltk.download('averaged_perceptron_tagger')
-
-
+except LookupError:
+    # This is the correct exception to catch when nltk.data.find fails.
+    nltk.download('punkt')
+    nltk.download('wordnet')
+    nltk.download('omw-1.4')
+    nltk.download('averaged_perceptron_tagger')
 # Affix dictionaries with meanings
 prefixes = {
     "un": "not, opposite of", "re": "again", "dis": "not, opposite of",
