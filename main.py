@@ -1,0 +1,242 @@
+import nltk
+from nltk.stem import WordNetLemmatizer
+from nltk.corpus import wordnet
+
+# Download necessary NLTK data once, then comment these out after first run
+nltk.download('punkt')
+nltk.download('wordnet')
+nltk.download('omw-1.4')
+nltk.download('averaged_perceptron_tagger')
+
+# Affix dictionaries with meanings
+prefixes = {
+    "un": "not, opposite of",
+    "re": "again",
+    "dis": "not, opposite of",
+    "pre": "before",
+    "in": "not or into",
+    "im": "not or into",
+    "inter": "between",
+    "mis": "wrongly",
+    "sub": "under, below",
+    "super": "above, beyond",
+    "trans": "across, beyond",
+    "anti": "against",
+    "auto": "self",
+    "bi": "two",
+    "circum": "around",
+    "de": "down, away, reverse",
+    "ex": "out of, former",
+    "fore": "before",
+    "mid": "middle",
+    "over": "excessive",
+    "semi": "half",
+    "under": "below, insufficient",
+}
+
+suffixes = {
+    "ing": "action or process",
+    "ness": "state or quality",
+    "ed": "past tense",
+    "er": "one who, comparative",
+    "ly": "characteristic of",
+    "tion": "state or action",
+    "ity": "state or quality",
+    "ment": "action or process",
+    "able": "capable of being",
+    "al": "pertaining to",
+    "ence": "state or quality",
+    "est": "superlative adjective",
+    "ful": "full of",
+    "ic": "pertaining to",
+    "ish": "like, characteristic of",
+    "let": "small",
+    "ous": "full of",
+    "ship": "state or condition",
+    "y": "characterized by",
+}
+
+# Morpheme type classifications with brief descriptions
+prefix_types = {
+    "un": ("bound morpheme", "derivational (negation)"),
+    "re": ("bound morpheme", "derivational (repetition)"),
+    "dis": ("bound morpheme", "derivational (negation)"),
+    "pre": ("bound morpheme", "derivational (temporal: before)"),
+    "in": ("bound morpheme", "derivational (negation or direction)"),
+    "im": ("bound morpheme", "derivational (negation or direction)"),
+    "inter": ("bound morpheme", "derivational (between)"),
+    "mis": ("bound morpheme", "derivational (wrongly)"),
+    "sub": ("bound morpheme", "derivational (spatial: under, below)"),
+    "super": ("bound morpheme", "derivational (spatial: above, beyond)"),
+    "trans": ("bound morpheme", "derivational (across, beyond)"),
+    "anti": ("bound morpheme", "derivational (against)"),
+    "auto": ("bound morpheme", "derivational (self)"),
+    "bi": ("bound morpheme", "derivational (two)"),
+    "circum": ("bound morpheme", "derivational (around)"),
+    "de": ("bound morpheme", "derivational (down, away, reverse)"),
+    "ex": ("bound morpheme", "derivational (out of, former)"),
+    "fore": ("bound morpheme", "derivational (temporal: before)"),
+    "mid": ("bound morpheme", "derivational (spatial: middle)"),
+    "over": ("bound morpheme", "derivational (excessive)"),
+    "semi": ("bound morpheme", "derivational (half)"),
+    "under": ("bound morpheme", "derivational (below, insufficient)"),
+}
+
+suffix_types = {
+    "ing": ("bound morpheme", "inflectional (progressive verb form)"),
+    "ness": ("bound morpheme", "derivational (forms nouns from adjectives)"),
+    "ed": ("bound morpheme", "inflectional (past tense of verbs)"),
+    "er": ("bound morpheme", "derivational (agent noun or comparative adjective)"),
+    "ly": ("bound morpheme", "derivational (forms adverbs from adjectives)"),
+    "tion": ("bound morpheme", "derivational (forms nouns)"),
+    "ity": ("bound morpheme", "derivational (forms nouns)"),
+    "ment": ("bound morpheme", "derivational (forms nouns)"),
+    "able": ("bound morpheme", "derivational (capable of being)"),
+    "al": ("bound morpheme", "derivational (pertaining to)"),
+    "ence": ("bound morpheme", "derivational (state or quality)"),
+    "est": ("bound morpheme", "inflectional (superlative adjective)"),
+    "ful": ("bound morpheme", "derivational (full of)"),
+    "ic": ("bound morpheme", "derivational (pertaining to)"),
+    "ish": ("bound morpheme", "derivational (like, characteristic of)"),
+    "let": ("bound morpheme", "derivational (small)"),
+    "ous": ("bound morpheme", "derivational (full of)"),
+    "ship": ("bound morpheme", "derivational (state or condition)"),
+    "y": ("bound morpheme", "derivational (characterized by)"),
+}
+
+lemmatizer = WordNetLemmatizer()
+
+
+def is_real_word(word):
+    """Check if WordNet contains the given word"""
+    return bool(wordnet.synsets(word))
+
+
+def analyze_word(word):
+    """Analyze prefix, root, suffix, and print their meanings and types"""
+    word = word.lower()
+    found_prefix = ""
+    found_suffix = ""
+    root_candidate = word
+
+    # Detect prefix (longest first)
+    for p in sorted(prefixes, key=len, reverse=True):
+        if word.startswith(p):
+            maybe_root = word[len(p):]
+            if is_real_word(maybe_root):
+                found_prefix = p
+                root_candidate = maybe_root
+                break
+
+    # Detect suffix (longest first)
+    for s in sorted(suffixes, key=len, reverse=True):
+        if root_candidate.endswith(s):
+            maybe_root = root_candidate[:-len(s)]
+            if is_real_word(maybe_root):
+                found_suffix = s
+                root_candidate = maybe_root
+                break
+
+    root_lemma = lemmatizer.lemmatize(root_candidate)
+
+    if is_real_word(root_lemma):
+        root_meaning = wordnet.synsets(root_lemma)[0].definition()
+    else:
+        root_meaning = "Not found in WordNet"
+
+    print(f"\nResults for: {word}")
+    if found_prefix:
+        p_type = prefix_types.get(found_prefix, ("unknown", "unknown"))
+        print(f"Prefix: {found_prefix} | Meaning: {prefixes[found_prefix]} | Type: {p_type[0]}, {p_type[1]} morpheme")
+    print(f"Root: {root_lemma} | Meaning: {root_meaning} | Type: free root morpheme")
+    if found_suffix:
+        s_type = suffix_types.get(found_suffix, ("unknown", "unknown"))
+        print(f"Suffix: {found_suffix} | Meaning: {suffixes[found_suffix]} | Type: {s_type[0]}, {s_type[1]} morpheme")
+    if not (found_prefix or found_suffix):
+        print("No prefix or suffix found. The whole word may be the root.")
+
+
+def print_morpheme_tree_branch(word):
+    """Print the morphemes in a tree structure:
+    - If only prefix: original word at top, prefix and root branching down right with '/' and '|'
+    - If only suffix: original word at top, root and suffix branching down right with '\' and '|'
+    - If prefix and suffix: horizontal tree with branches
+    - If only root: root centered with '...' branches
+    """
+
+    word = word.lower()
+    found_prefix = ""
+    found_suffix = ""
+    root_candidate = word
+
+    # Detect prefix (longest first)
+    for p in sorted(prefixes, key=len, reverse=True):
+        if word.startswith(p):
+            maybe_root = word[len(p):]
+            if is_real_word(maybe_root):
+                found_prefix = p
+                root_candidate = maybe_root
+                break
+
+    # Detect suffix (longest first)
+    for s in sorted(suffixes, key=len, reverse=True):
+        if root_candidate.endswith(s):
+            maybe_root = root_candidate[:-len(s)]
+            if is_real_word(maybe_root):
+                found_suffix = s
+                root_candidate = maybe_root
+                break
+
+    root_lemma = lemmatizer.lemmatize(root_candidate)
+
+    print(f"\nOriginal word: {word}\nMorpheme Tree:")
+
+    if found_prefix and found_suffix:
+        # prefix, root, suffix all present (horizontal three-branch)
+        root_line = root_lemma.center(20)
+        branch_line = "    /    |    \\"
+        children_line = f"{found_prefix.center(5)}{root_lemma.center(10)}{found_suffix.center(4)}"
+        print("    ", word)
+        print(branch_line)
+        print(children_line)
+
+    elif found_prefix:
+        # Only prefix case tree:
+        print(word.center(16))
+        print("     /   |")
+        print("    /    |")
+        print(f"{found_prefix.ljust(5)}{root_lemma.rjust(7)}")
+
+    elif found_suffix:
+        # Only suffix case tree:
+        print(word.center(18))
+        print("     |    \\")
+        print("     |      \\")
+        print(f"   {root_lemma.ljust(8)}{found_suffix.rjust(5)}")
+
+    else:
+        # Only root case:
+        print("      " + root_lemma)
+        print("    /   |   \\")
+        print(f"  {'...'.center(2)}{root_lemma.center(8)}{'...'.center(8)}")
+
+
+def main():
+    print("Enter words to analyze their morphemes and see a morpheme tree. Type 'quit' to exit.")
+    try:
+        while True:
+            user_input = input("\nEnter a word: ").strip()
+            if user_input.lower() == "quit":
+                print("Exiting program.")
+                break
+            if not user_input.isalpha():
+                print("Please enter valid alphabetic words only.")
+                continue
+            analyze_word(user_input)
+            print_morpheme_tree_branch(user_input)
+    except KeyboardInterrupt:
+        print("\nProgram interrupted by user. Exiting gracefully.")
+
+
+if __name__ == "__main__":
+    main()
