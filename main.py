@@ -1,59 +1,38 @@
+import streamlit as st
 import nltk
 from nltk.stem import WordNetLemmatizer
 from nltk.corpus import wordnet
 
 # Download necessary NLTK data once, then comment these out after first run
-nltk.download('punkt')
-nltk.download('wordnet')
-nltk.download('omw-1.4')
-nltk.download('averaged_perceptron_tagger')
+try:
+    nltk.data.find('corpora/wordnet')
+    nltk.data.find('corpora/omw-1.4')
+    nltk.data.find('taggers/averaged_perceptron_tagger')
+except nltk.downloader.DownloadError:
+    nltk.download('punkt')
+    nltk.download('wordnet')
+    nltk.download('omw-1.4')
+    nltk.download('averaged_perceptron_tagger')
+
 
 # Affix dictionaries with meanings
 prefixes = {
-    "un": "not, opposite of",
-    "re": "again",
-    "dis": "not, opposite of",
-    "pre": "before",
-    "in": "not or into",
-    "im": "not or into",
-    "inter": "between",
-    "mis": "wrongly",
-    "sub": "under, below",
-    "super": "above, beyond",
-    "trans": "across, beyond",
-    "anti": "against",
-    "auto": "self",
-    "bi": "two",
-    "circum": "around",
-    "de": "down, away, reverse",
-    "ex": "out of, former",
-    "fore": "before",
-    "mid": "middle",
-    "over": "excessive",
-    "semi": "half",
-    "under": "below, insufficient",
+    "un": "not, opposite of", "re": "again", "dis": "not, opposite of",
+    "pre": "before", "in": "not or into", "im": "not or into",
+    "inter": "between", "mis": "wrongly", "sub": "under, below",
+    "super": "above, beyond", "trans": "across, beyond", "anti": "against",
+    "auto": "self", "bi": "two", "circum": "around", "de": "down, away, reverse",
+    "ex": "out of, former", "fore": "before", "mid": "middle",
+    "over": "excessive", "semi": "half", "under": "below, insufficient",
 }
 
 suffixes = {
-    "ing": "action or process",
-    "ness": "state or quality",
-    "ed": "past tense",
-    "er": "one who, comparative",
-    "ly": "characteristic of",
-    "tion": "state or action",
-    "ity": "state or quality",
-    "ment": "action or process",
-    "able": "capable of being",
-    "al": "pertaining to",
-    "ence": "state or quality",
-    "est": "superlative adjective",
-    "ful": "full of",
-    "ic": "pertaining to",
-    "ish": "like, characteristic of",
-    "let": "small",
-    "ous": "full of",
-    "ship": "state or condition",
-    "y": "characterized by",
+    "ing": "action or process", "ness": "state or quality", "ed": "past tense",
+    "er": "one who, comparative", "ly": "characteristic of", "tion": "state or action",
+    "ity": "state or quality", "ment": "action or process", "able": "capable of being",
+    "al": "pertaining to", "ence": "state or quality", "est": "superlative adjective",
+    "ful": "full of", "ic": "pertaining to", "ish": "like, characteristic of",
+    "let": "small", "ous": "full of", "ship": "state or condition", "y": "characterized by",
 }
 
 # Morpheme type classifications with brief descriptions
@@ -113,11 +92,12 @@ def is_real_word(word):
 
 
 def analyze_word(word):
-    """Analyze prefix, root, suffix, and print their meanings and types"""
+    """Analyze prefix, root, suffix and return a string with the results"""
     word = word.lower()
     found_prefix = ""
     found_suffix = ""
     root_candidate = word
+    results = []
 
     # Detect prefix (longest first)
     for p in sorted(prefixes, key=len, reverse=True):
@@ -144,26 +124,22 @@ def analyze_word(word):
     else:
         root_meaning = "Not found in WordNet"
 
-    print(f"\nResults for: {word}")
+    results.append(f"**Results for:** **`{word}`**")
     if found_prefix:
         p_type = prefix_types.get(found_prefix, ("unknown", "unknown"))
-        print(f"Prefix: {found_prefix} | Meaning: {prefixes[found_prefix]} | Type: {p_type[0]}, {p_type[1]} morpheme")
-    print(f"Root: {root_lemma} | Meaning: {root_meaning} | Type: free root morpheme")
+        results.append(f"**Prefix:** `{found_prefix}` | **Meaning:** _{prefixes[found_prefix]}_ | **Type:** `{p_type[0]}, {p_type[1]} morpheme`")
+    results.append(f"**Root:** `{root_lemma}` | **Meaning:** _{root_meaning}_ | **Type:** `free root morpheme`")
     if found_suffix:
         s_type = suffix_types.get(found_suffix, ("unknown", "unknown"))
-        print(f"Suffix: {found_suffix} | Meaning: {suffixes[found_suffix]} | Type: {s_type[0]}, {s_type[1]} morpheme")
+        results.append(f"**Suffix:** `{found_suffix}` | **Meaning:** _{suffixes[found_suffix]}_ | **Type:** `{s_type[0]}, {s_type[1]} morpheme`")
     if not (found_prefix or found_suffix):
-        print("No prefix or suffix found. The whole word may be the root.")
+        results.append("No prefix or suffix found. The whole word may be the root.")
+    
+    return "\n\n".join(results)
 
 
-def print_morpheme_tree_branch(word):
-    """Print the morphemes in a tree structure:
-    - If only prefix: original word at top, prefix and root branching down right with '/' and '|'
-    - If only suffix: original word at top, root and suffix branching down right with '\' and '|'
-    - If prefix and suffix: horizontal tree with branches
-    - If only root: root centered with '...' branches
-    """
-
+def get_morpheme_tree(word):
+    """Return a string representing the morpheme tree."""
     word = word.lower()
     found_prefix = ""
     found_suffix = ""
@@ -188,55 +164,60 @@ def print_morpheme_tree_branch(word):
                 break
 
     root_lemma = lemmatizer.lemmatize(root_candidate)
-
-    print(f"\nOriginal word: {word}\nMorpheme Tree:")
+    
+    tree_lines = []
+    
+    tree_lines.append(f"**Morpheme Tree for:** **`{word}`**\n")
 
     if found_prefix and found_suffix:
         # prefix, root, suffix all present (horizontal three-branch)
-        root_line = root_lemma.center(20)
-        branch_line = "    /    |    \\"
-        children_line = f"{found_prefix.center(5)}{root_lemma.center(10)}{found_suffix.center(4)}"
-        print("    ", word)
-        print(branch_line)
-        print(children_line)
-
+        tree_lines.append(f"`        {word}`")
+        tree_lines.append("`    /     |     \\`")
+        tree_lines.append(f"`   {found_prefix}   {root_lemma}   {found_suffix}`")
     elif found_prefix:
         # Only prefix case tree:
-        print(word.center(16))
-        print("     /   |")
-        print("    /    |")
-        print(f"{found_prefix.ljust(5)}{root_lemma.rjust(7)}")
-
+        tree_lines.append(f"`       {word}`")
+        tree_lines.append("`     /    |`")
+        tree_lines.append(f"`   {found_prefix}    {root_lemma}`")
     elif found_suffix:
         # Only suffix case tree:
-        print(word.center(18))
-        print("     |    \\")
-        print("     |      \\")
-        print(f"   {root_lemma.ljust(8)}{found_suffix.rjust(5)}")
-
+        tree_lines.append(f"`       {word}`")
+        tree_lines.append("`      |     \\`")
+        tree_lines.append(f"`    {root_lemma}     {found_suffix}`")
     else:
         # Only root case:
-        print("      " + root_lemma)
-        print("    /   |   \\")
-        print(f"  {'...'.center(2)}{root_lemma.center(8)}{'...'.center(8)}")
+        tree_lines.append(f"`      {root_lemma}`")
+        tree_lines.append("`    /   |   \\`")
+        tree_lines.append(f"`  ...   {root_lemma}   ...`")
+
+    return "\n".join(tree_lines)
 
 
-def main():
-    print("Enter words to analyze their morphemes and see a morpheme tree. Type 'quit' to exit.")
-    try:
-        while True:
-            user_input = input("\nEnter a word: ").strip()
-            if user_input.lower() == "quit":
-                print("Exiting program.")
-                break
-            if not user_input.isalpha():
-                print("Please enter valid alphabetic words only.")
-                continue
-            analyze_word(user_input)
-            print_morpheme_tree_branch(user_input)
-    except KeyboardInterrupt:
-        print("\nProgram interrupted by user. Exiting gracefully.")
+def app():
+    """Main function for the Streamlit app."""
+    st.set_page_config(page_title="Morpheme Analyzer", layout="centered")
+
+    st.title("Linguistic Morpheme Analyzer")
+    st.markdown("""
+        **Enter a word below** and this app will attempt to break it down into its
+        constituent morphemes (prefix, root, suffix). It provides a linguistic analysis
+        and a simple tree diagram. 🌳
+    """)
+    
+    user_input = st.text_input("Enter a word:", "unbelievably").strip()
+
+    if user_input:
+        if not user_input.isalpha():
+            st.warning("Please enter a valid alphabetic word only.")
+        else:
+            st.markdown("---")
+            analysis_text = analyze_word(user_input)
+            st.markdown(analysis_text)
+            
+            st.markdown("---")
+            tree_text = get_morpheme_tree(user_input)
+            st.markdown(f"```\n{tree_text}\n```")
 
 
 if __name__ == "__main__":
-    main()
+    app()
